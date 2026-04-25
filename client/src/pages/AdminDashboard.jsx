@@ -1,15 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { AlertCircle, Map as MapIcon, Users, CheckCircle2, Clock, ExternalLink } from 'lucide-react';
-
+import { io } from 'socket.io-client';
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 const AdminDashboard = () => {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [liveUsers, setLiveUsers] = useState({});
+  const [pendingPayments, setPendingPayments] = useState([]);
+  const socketRef = useRef(null);
+
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: "YOUR_GOOGLE_MAPS_API_KEY"
+  });
 
   useEffect(() => {
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 10000); // Poll every 10s
-    return () => clearInterval(interval);
+    fetchPendingPayments();
+    
+    // Connect to WebSocket Server
+    socketRef.current = io('http://localhost:5000');
+    
+    // Join admin room
+    socketRef.current.emit('join_admin');
+
+    // Listen for live location updates (every 3s)
+    socketRef.current.on('live_location', (data) => {
+      setLiveUsers((prev) => ({
+        ...prev,
+        [data.userId]: data.location
+      }));
+    });
+
+    // Listen for instant emergency triggers
+    socketRef.current.on('emergency_trigger', (newAlert) => {
+      setAlerts((prev) => [newAlert, ...prev]);
+    });
+
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    };
   }, []);
 
   const fetchAlerts = async () => {
@@ -21,6 +52,29 @@ const AdminDashboard = () => {
       setLoading(false);
     } catch (err) {
       console.error('Failed to fetch alerts');
+    }
+  };
+
+  const fetchPendingPayments = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/payment/pending', {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setPendingPayments(res.data);
+    } catch (err) {
+      console.error('Failed to fetch pending payments');
+    }
+  };
+
+  const handlePaymentAction = async (id, action) => {
+    try {
+      await axios.post(`http://localhost:5000/api/payment/${action}/${id}`, {}, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      fetchPendingPayments();
+      alert(`Payment ${action}d successfully`);
+    } catch (err) {
+      alert(`Failed to ${action} payment`);
     }
   };
 
@@ -118,33 +172,78 @@ const AdminDashboard = () => {
         </div>
 
         <div className="space-y-6">
-           <div className="glass p-8 rounded-3xl h-[400px] flex flex-col items-center justify-center text-center bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80')] bg-cover bg-center relative">
-             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm rounded-3xl"></div>
-             <div className="relative z-10">
-               <MapIcon size={48} className="text-secondary mx-auto mb-4" />
-               <h3 className="text-xl font-bold mb-2">Live Map View</h3>
-               <p className="text-slate-400 text-sm mb-6">Interactive monitoring map showing all active SOS locations.</p>
-               <button className="btn-secondary w-full">Launch Map</button>
+           <div className="glass p-8 rounded-3xl h-[400px] flex flex-col relative overflow-hidden">
+             {isLoaded ? (
+               <div className="absolute inset-0">
+                 <GoogleMap
+                   mapContainerStyle={{ width: '100%', height: '100%' }}
+                   center={{ lat: 9.03, lng: 38.74 }} // Default center (Addis Ababa)
+                   zoom={12}
+                   options={{ styles: mapDarkStyles, disableDefaultUI: true }}
+                 >
+                   {Object.keys(liveUsers).map(userId => (
+                     <Marker 
+                       key={userId} 
+                       position={liveUsers[userId]} 
+                       icon={{
+                         path: window.google.maps.SymbolPath.CIRCLE,
+                         scale: 8,
+                         fillColor: "#ff0000",
+                         fillOpacity: 1,
+                         strokeWeight: 2,
+                         strokeColor: "#ffffff"
+                       }}
+                     />
+                   ))}
+                 </GoogleMap>
+               </div>
+             ) : (
+               <div className="h-full w-full flex items-center justify-center">
+                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary"></div>
+               </div>
+             )}
+             
+             <div className="relative z-10 pointer-events-none flex justify-between items-start">
+               <h3 className="text-xl font-bold bg-slate-950/50 backdrop-blur-md px-4 py-2 rounded-xl inline-block border border-white/10">Live Tracking Map</h3>
+               <div className="bg-red-600/20 border border-red-600 text-red-500 font-bold px-3 py-1 rounded-full text-xs animate-pulse">
+                 {Object.keys(liveUsers).length} Active Trackers
+               </div>
              </div>
            </div>
 
            <div className="glass p-8 rounded-3xl">
              <h3 className="text-xl font-bold mb-6">Pending Subscriptions</h3>
-             <div className="space-y-4">
-               {/* Mock pending payments */}
-               {[1, 2].map(i => (
-                 <div key={i} className="p-4 bg-slate-950/50 rounded-2xl border border-white/5">
-                   <div className="flex justify-between items-start mb-2">
-                     <span className="font-bold text-sm">User #{i}542</span>
-                     <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded-full font-bold">ETB 299</span>
+             <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+               {pendingPayments.length === 0 ? (
+                 <p className="text-sm text-slate-500 text-center py-4">No pending payments.</p>
+               ) : (
+                 pendingPayments.map(payment => (
+                   <div key={payment._id} className="p-4 bg-slate-950/50 rounded-2xl border border-white/5">
+                     <div className="flex justify-between items-start mb-2">
+                       <span className="font-bold text-sm">{payment.userId?.name || 'Unknown User'}</span>
+                       <span className="text-[10px] uppercase bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded-full font-bold">
+                         {payment.plan}
+                       </span>
+                     </div>
+                     <p className="text-xs text-slate-500 mb-1">Ref: {payment.refNumber}</p>
+                     <p className="text-xs text-slate-500 mb-4">Method: <span className="uppercase">{payment.paymentMethod}</span></p>
+                     <div className="flex gap-2">
+                       <button 
+                         onClick={() => handlePaymentAction(payment._id, 'approve')}
+                         className="flex-grow py-2 bg-accent text-slate-950 text-xs font-bold rounded-lg hover:bg-accent/80 transition-colors"
+                       >
+                         APPROVE
+                       </button>
+                       <button 
+                         onClick={() => handlePaymentAction(payment._id, 'reject')}
+                         className="py-2 px-3 bg-red-600/20 text-red-500 text-xs font-bold rounded-lg hover:bg-red-600/40 transition-colors"
+                       >
+                         REJECT
+                       </button>
+                     </div>
                    </div>
-                   <p className="text-xs text-slate-500 mb-4">Ref: TXN-8273645{i}</p>
-                   <div className="flex gap-2">
-                     <button className="flex-grow py-2 bg-accent text-slate-950 text-xs font-bold rounded-lg">APPROVE</button>
-                     <button className="py-2 px-3 bg-red-600/20 text-red-500 text-xs font-bold rounded-lg">REJECT</button>
-                   </div>
-                 </div>
-               ))}
+                 ))
+               )}
              </div>
            </div>
         </div>
@@ -152,5 +251,12 @@ const AdminDashboard = () => {
     </div>
   );
 };
+
+const mapDarkStyles = [
+  { elementType: "geometry", stylers: [{ color: "#0f172a" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#1e293b" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#020617" }] }
+];
 
 export default AdminDashboard;

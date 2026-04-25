@@ -3,23 +3,31 @@ const User = require('../models/User');
 const authMiddleware = require('../middleware/authMiddleware');
 const router = express.Router();
 
+const Payment = require('../models/Payment');
+
 router.post('/subscribe', authMiddleware, async (req, res) => {
     try {
-        const { plan } = req.body;
-        let duration = 0;
-        if (plan === 'weekly') duration = 7;
-        else if (plan === 'monthly') duration = 30;
-        else if (plan === 'yearly') duration = 365;
+        const { plan, refNumber, method } = req.body;
+        
+        // Ensure plan is lowercase
+        const normalizedPlan = plan.toLowerCase();
 
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + duration);
+        // Create a pending payment
+        const payment = new Payment({
+            userId: req.user.id,
+            plan: normalizedPlan,
+            refNumber,
+            paymentMethod: method || 'other',
+            status: 'pending'
+        });
 
-        const user = await User.findByIdAndUpdate(req.user.id, {
-            subscriptionStatus: { plan, expiresAt }
-        }, { new: true });
+        await payment.save();
 
-        res.json({ message: `Successfully subscribed to ${plan} plan`, subscriptionStatus: user.subscriptionStatus });
+        res.json({ message: `Payment submitted for verification. Reference: ${refNumber}` });
     } catch (err) {
+        if (err.code === 11000) {
+            return res.status(400).json({ message: 'Reference number already used.' });
+        }
         res.status(500).json({ message: err.message });
     }
 });

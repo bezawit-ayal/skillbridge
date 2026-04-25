@@ -4,15 +4,17 @@ module.exports = (requiredPlan) => {
     return async (req, res, next) => {
         try {
             const user = await User.findById(req.user.id);
-            const plan = user.subscriptionStatus.plan;
-            const expiresAt = user.subscriptionStatus.expiresAt;
+            const sub = user.subscription;
 
-            if (plan === 'free' && requiredPlan !== 'free') {
-                return res.status(403).json({ message: 'Premium subscription required' });
+            if (!sub.isActive && requiredPlan !== 'free') {
+                return res.status(403).json({ message: 'Active premium subscription required' });
             }
 
-            if (expiresAt && new Date() > expiresAt) {
-                return res.status(403).json({ message: 'Subscription expired' });
+            if (sub.endDate && new Date() > sub.endDate) {
+                // Auto-deactivate expired subscription
+                user.subscription.isActive = false;
+                await user.save();
+                return res.status(403).json({ message: 'Subscription expired. Please renew.' });
             }
 
             next();

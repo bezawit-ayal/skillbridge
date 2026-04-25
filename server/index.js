@@ -32,6 +32,8 @@ app.use('/api/monitor', require('./routes/monitor'));
 app.use('/api/trips', require('./routes/trips'));
 app.use('/api/contacts', require('./routes/contacts'));
 app.use('/api/subscription', require('./routes/subscription'));
+app.use('/api/location', require('./routes/location'));
+app.use('/api/payment', require('./routes/payment'));
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -44,7 +46,39 @@ mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('✅ Connected to MongoDB'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
+const http = require('http');
+const { Server } = require('socket.io');
+
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: ["http://localhost:5173", "http://localhost:3000"],
+        methods: ["GET", "POST", "PATCH"]
+    }
+});
+
+// Attach io to req for use in routes
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+});
+
+// Socket Connection Handling
+io.on('connection', (socket) => {
+    console.log(`⚡ Socket connected: ${socket.id}`);
+    
+    socket.on('join_admin', () => {
+        socket.join('admin_room');
+        console.log(`👮 Admin joined: ${socket.id}`);
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`🛑 Socket disconnected: ${socket.id}`);
+    });
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+

@@ -6,9 +6,11 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
-    subscriptionStatus: { 
-        plan: { type: String, enum: ['free', 'weekly', 'monthly', 'yearly'], default: 'free' },
-        expiresAt: { type: Date, default: null }
+    subscription: { 
+        plan: { type: String, enum: ['free', 'daily', 'weekly', 'monthly'], default: 'free' },
+        startDate: { type: Date, default: null },
+        endDate: { type: Date, default: null },
+        isActive: { type: Boolean, default: false }
     }
 }, { timestamps: true });
 

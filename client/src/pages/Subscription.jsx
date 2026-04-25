@@ -13,13 +13,14 @@ const Subscription = () => {
     const loadingToast = toast.loading('Submitting for verification...');
     try {
       await api.post('/subscription/subscribe', {
-        plan: selectedPlan,
-        refNumber
+        plan: selectedPlan.toLowerCase(),
+        refNumber,
+        method: 'telebirr' // Defaulting for demo purposes
       });
       toast.success('Payment submitted! Plan will be active shortly.', { id: loadingToast });
       setRefNumber('');
     } catch (err) {
-      toast.error('Submission failed. Please try again.', { id: loadingToast });
+      toast.error(err.response?.data?.message || 'Submission failed. Please try again.', { id: loadingToast });
     }
   };
   const plans = [
@@ -30,23 +31,23 @@ const Subscription = () => {
       accent: 'slate'
     },
     {
+      name: 'Daily',
+      price: '15',
+      features: ['Basic Navigation', 'Manual SOS', '3 Emergency Contacts', '24hr Real-time Tracking'],
+      accent: 'blue'
+    },
+    {
       name: 'Weekly',
       price: '99',
-      features: ['Basic Navigation', 'Manual SOS', '3 Emergency Contacts', 'Real-time Tracking'],
-      accent: 'blue'
+      features: ['All Daily Features', 'Auto SOS', 'Unlimited Contacts', 'Priority Alerts'],
+      accent: 'accent'
     },
     {
       name: 'Monthly',
       price: '299',
-      features: ['Full Features', 'Auto SOS', 'Unlimited Contacts', 'Accident Detection', 'Priority Alerts'],
+      features: ['Full Features', 'Family Sharing', 'Accident Detection', 'Offline Maps'],
       accent: 'red',
       recommended: true
-    },
-    {
-      name: 'Yearly',
-      price: '2499',
-      features: ['All Monthly Features', 'Family Sharing', 'Offline Maps', 'Insurance Discounts'],
-      accent: 'accent'
     }
   ];
 
@@ -68,7 +69,7 @@ const Subscription = () => {
             <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
             <div className="flex items-baseline gap-1 mb-8">
               <span className="text-4xl font-black">ETB {plan.price}</span>
-              <span className="text-slate-400 text-sm">/{plan.name === 'Yearly' ? 'year' : plan.name.toLowerCase()}</span>
+              <span className="text-slate-400 text-sm">/{plan.name === 'Free' ? 'forever' : plan.name.toLowerCase().replace('ly', '')}</span>
             </div>
             
             <ul className="space-y-4 mb-8 flex-grow">
@@ -80,8 +81,15 @@ const Subscription = () => {
               ))}
             </ul>
 
-            <button className={`w-full py-4 rounded-xl font-bold transition-all ${plan.recommended ? 'bg-red-600 text-white' : 'bg-slate-800 text-white hover:bg-slate-700'}`}>
-              Get Started
+            <button 
+              onClick={() => setSelectedPlan(plan.name)}
+              className={`w-full py-4 rounded-xl font-bold transition-all ${
+                selectedPlan === plan.name 
+                  ? 'bg-red-600 text-white' 
+                  : 'bg-slate-800 text-white hover:bg-slate-700'
+              }`}
+            >
+              {selectedPlan === plan.name ? 'Selected' : 'Select Plan'}
             </button>
           </div>
         ))}

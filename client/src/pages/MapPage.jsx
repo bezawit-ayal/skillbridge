@@ -4,6 +4,7 @@ import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-go
 import { Shield, AlertTriangle, CheckCircle, Clock, Navigation, Map as MapIcon, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { io } from 'socket.io-client';
 import { saveAlertOffline, syncOfflineAlerts } from '../services/offlineSync';
 
 const MapPage = () => {
@@ -23,6 +24,8 @@ const MapPage = () => {
   const lastTimeRef = useRef(Date.now());
   const countdownInterval = useRef(null);
   const locationSyncInterval = useRef(null);
+  const fastRealTimeInterval = useRef(null);
+  const socketRef = useRef(null);
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -31,6 +34,9 @@ const MapPage = () => {
 
   // Start trip on server when component mounts
   useEffect(() => {
+    // Connect socket
+    socketRef.current = io('http://localhost:5000');
+    
     const initTrip = async () => {
       try {
         const res = await axios.post('http://localhost:5000/api/trips/start', {
@@ -45,6 +51,10 @@ const MapPage = () => {
     initTrip();
     fetchRoutes();
     syncOfflineAlerts();
+
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    }
   }, []);
 
   // Watch GPS + send location updates to server every 10s
@@ -73,7 +83,7 @@ const MapPage = () => {
       { enableHighAccuracy: true, distanceFilter: 10 }
     );
 
-    // Push location to backend every 10 seconds
+    // Push location to backend every 10 seconds for DB history
     locationSyncInterval.current = setInterval(() => {
       if (activeTripId && lastPosRef.current) {
         axios.patch(`http://localhost:5000/api/trips/${activeTripId}/location`, {
@@ -83,9 +93,20 @@ const MapPage = () => {
       }
     }, 10000);
 
+    // Fast 3-second interval for real-time Police Dashboard direction
+    fastRealTimeInterval.current = setInterval(() => {
+      if (lastPosRef.current) {
+        axios.post('http://localhost:5000/api/location/update', {
+          lat: lastPosRef.current.lat,
+          lng: lastPosRef.current.lng
+        }, { headers: { 'x-auth-token': localStorage.getItem('token') } }).catch(() => {});
+      }
+    }, 3000);
+
     return () => {
       navigator.geolocation.clearWatch(watchId);
       clearInterval(locationSyncInterval.current);
+      clearInterval(fastRealTimeInterval.current);
     };
   }, [speed, activeTripId]);
 
@@ -174,8 +195,10 @@ const MapPage = () => {
   };
 
   const triggerSMSFallback = () => {
-    const mapsLink = `https://www.google.com/maps?q=${currentPosition.lat},${currentPosition.lng}`;
-    const message = encodeURIComponent(`EMERGENCY SOS: Help me! My location: ${mapsLink}`);
+    const lat = lastPosRef.current ? lastPosRef.current.lat : (currentPosition?.lat || 0);
+    const lng = lastPosRef.current ? lastPosRef.current.lng : (currentPosition?.lng || 0);
+    const mapsLink = `https://www.google.com/maps?q=${lat},${lng}`;
+    const message = encodeURIComponent(`🚨 EMERGENCY ALERT: I am in danger! My location: ${mapsLink}`);
     window.location.href = `sms:?body=${message}`;
   };
 

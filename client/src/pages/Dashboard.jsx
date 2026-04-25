@@ -25,7 +25,7 @@ const Dashboard = () => {
           <h1 className="text-4xl font-extrabold mb-2">Welcome, {user.name}</h1>
           <div className="flex items-center gap-2 text-slate-400">
             <ShieldCheck size={18} className="text-accent" />
-            <span>Plan: {user.subscriptionStatus?.plan || 'Free'}</span>
+            <span>Plan: {user.subscription?.plan || 'Free'}</span>
           </div>
         </div>
         <button onClick={logout} className="p-3 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-all">
