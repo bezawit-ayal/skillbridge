@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, Home, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 const SOSPage = () => {
     const navigate = useNavigate();
@@ -24,9 +25,13 @@ const SOSPage = () => {
                     <Home size={20} /> DASHBOARD
                 </button>
                 <button 
-                    className="flex items-center justify-center gap-3 py-5 bg-white text-slate-950 rounded-2xl font-bold hover:bg-slate-200 transition-all"
+                    onClick={() => {
+                        toast.success('Alert Cancelled. Security team notified.');
+                        navigate('/dashboard');
+                    }}
+                    className="flex items-center justify-center gap-3 py-5 bg-red-600 rounded-2xl font-bold hover:bg-red-700 transition-all"
                 >
-                    <Phone size={20} /> CALL HELP
+                    CANCEL ALERT
                 </button>
             </div>
         </div>

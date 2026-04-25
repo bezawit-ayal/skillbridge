@@ -1,7 +1,26 @@
-import React from 'react';
 import { Check, Shield, CreditCard, Smartphone } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import api from '../api';
 
 const Subscription = () => {
+  const [refNumber, setRefNumber] = React.useState('');
+  const [selectedPlan, setSelectedPlan] = React.useState('Monthly');
+
+  const handlePaymentSubmit = async () => {
+    if (!refNumber) return toast.error('Please enter the transaction reference number');
+    
+    const loadingToast = toast.loading('Submitting for verification...');
+    try {
+      await api.post('/subscription/subscribe', {
+        plan: selectedPlan,
+        refNumber
+      });
+      toast.success('Payment submitted! Plan will be active shortly.', { id: loadingToast });
+      setRefNumber('');
+    } catch (err) {
+      toast.error('Submission failed. Please try again.', { id: loadingToast });
+    }
+  };
   const plans = [
     {
       name: 'Free',
@@ -95,8 +114,15 @@ const Subscription = () => {
                 type="text" 
                 placeholder="Transaction Reference" 
                 className="flex-grow bg-slate-950 border border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-600 outline-none"
+                value={refNumber}
+                onChange={(e) => setRefNumber(e.target.value)}
               />
-              <button className="bg-white text-slate-950 px-6 py-3 rounded-xl font-bold">Submit</button>
+              <button 
+                onClick={handlePaymentSubmit}
+                className="bg-white text-slate-950 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-all"
+              >
+                Submit
+              </button>
             </div>
           </div>
         </div>
