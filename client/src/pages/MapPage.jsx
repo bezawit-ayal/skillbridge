@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-google-maps/api';
 import { Shield, AlertTriangle, CheckCircle, Clock, Navigation, Map as MapIcon, ChevronRight } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 import { saveAlertOffline, syncOfflineAlerts } from '../services/offlineSync';
 
 const MapPage = () => {
@@ -12,6 +13,8 @@ const MapPage = () => {
   const [routes, setRoutes] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [isSafetyModalOpen, setIsSafetyModalOpen] = useState(false);
+  const [currentCheckId, setCurrentCheckId] = useState(null);
+  const [activeTripId, setActiveTripId] = useState(null);
   const [countdown, setCountdown] = useState(300);
   const [monitoringActive, setMonitoringActive] = useState(true);
   const [speed, setSpeed] = useState(0);
@@ -19,16 +22,33 @@ const MapPage = () => {
   const lastPosRef = useRef(null);
   const lastTimeRef = useRef(Date.now());
   const countdownInterval = useRef(null);
+  const locationSyncInterval = useRef(null);
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: "YOUR_GOOGLE_MAPS_API_KEY"
   });
 
+  // Start trip on server when component mounts
   useEffect(() => {
+    const initTrip = async () => {
+      try {
+        const res = await axios.post('http://localhost:5000/api/trips/start', {
+          startPoint: state?.startPoint || 'Current Location',
+          destination: state?.destination || 'Unknown'
+        }, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+        setActiveTripId(res.data._id);
+      } catch (err) {
+        console.error('Failed to start trip on server');
+      }
+    };
+    initTrip();
     fetchRoutes();
     syncOfflineAlerts();
-    
+  }, []);
+
+  // Watch GPS + send location updates to server every 10s
+  useEffect(() => {
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -53,8 +73,21 @@ const MapPage = () => {
       { enableHighAccuracy: true, distanceFilter: 10 }
     );
 
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [speed]);
+    // Push location to backend every 10 seconds
+    locationSyncInterval.current = setInterval(() => {
+      if (activeTripId && lastPosRef.current) {
+        axios.patch(`http://localhost:5000/api/trips/${activeTripId}/location`, {
+          lat: lastPosRef.current.lat,
+          lng: lastPosRef.current.lng
+        }, { headers: { 'x-auth-token': localStorage.getItem('token') } }).catch(() => {});
+      }
+    }, 10000);
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      clearInterval(locationSyncInterval.current);
+    };
+  }, [speed, activeTripId]);
 
   const fetchRoutes = async () => {
     try {
@@ -82,15 +115,29 @@ const MapPage = () => {
     return R * c;
   };
 
-  const triggerSafetyCheck = () => {
+  const triggerSafetyCheck = async () => {
     if (isSafetyModalOpen) return;
+    
+    // Notify Backend
+    try {
+      const res = await axios.post('http://localhost:5000/api/monitor/trigger', {
+        lastLocation: currentPosition,
+        triggeredBy: 'ACCIDENT'
+      }, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setCurrentCheckId(res.data.checkId);
+    } catch (err) {
+      console.error('Failed to trigger server-side monitoring');
+    }
+
     setIsSafetyModalOpen(true);
     setCountdown(300);
     countdownInterval.current = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(countdownInterval.current);
-          triggerSOS();
+          // SOS will be auto-triggered by server if we don't respond
           return 0;
         }
         return prev - 1;
@@ -134,23 +181,40 @@ const MapPage = () => {
 
   const handleFinishTrip = async () => {
     try {
-      await axios.post('http://localhost:5000/api/trips/start', {
-        startPoint: state?.startPoint || 'Current Location',
-        destination: state?.destination
-      }, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      toast.success('Trip saved to history!');
+      if (activeTripId) {
+        await axios.patch(`http://localhost:5000/api/trips/${activeTripId}/end`, {
+          status: 'completed'
+        }, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+      }
+      clearInterval(locationSyncInterval.current);
+      toast.success('Trip completed and saved to history!');
       navigate('/dashboard');
     } catch (err) {
       toast.error('Failed to save trip');
     }
   };
 
-  const handleImSafe = () => {
-    setIsSafetyModalOpen(false);
-    clearInterval(countdownInterval.current);
-    alert('Glad you are safe! Monitoring continues.');
+  const handleShareTrip = () => {
+    if (!activeTripId) return toast.error('Trip not started yet');
+    const shareUrl = `${window.location.origin}/share/${activeTripId}`;
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => toast.success('Share link copied to clipboard!'))
+      .catch(() => toast.error('Failed to copy link'));
+  };
+
+  const handleImSafe = async () => {
+    try {
+      await axios.post('http://localhost:5000/api/monitor/respond', {
+        checkId: currentCheckId
+      }, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setIsSafetyModalOpen(false);
+      clearInterval(countdownInterval.current);
+      toast.success('Glad you are safe! Monitoring resolved.');
+    } catch (err) {
+      toast.error('Failed to resolve safety check');
+    }
   };
 
   const formatTime = (seconds) => {
@@ -247,8 +311,14 @@ const MapPage = () => {
         </div>
         
         <button 
+          onClick={handleShareTrip}
+          className="ml-2 p-4 bg-blue-600 text-white rounded-2xl hover:scale-105 transition-all" title="Share Trip"
+        >
+          <Navigation size={22} strokeWidth={2.5} />
+        </button>
+        <button 
           onClick={handleFinishTrip}
-          className="ml-4 p-4 bg-white text-slate-950 rounded-2xl hover:scale-105 transition-all"
+          className="ml-2 p-4 bg-white text-slate-950 rounded-2xl hover:scale-105 transition-all" title="Finish Trip"
         >
           <CheckCircle size={24} strokeWidth={3} />
         </button>

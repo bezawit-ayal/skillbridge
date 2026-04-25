@@ -1,3 +1,4 @@
+import React from 'react';
 import { Check, Shield, CreditCard, Smartphone } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';

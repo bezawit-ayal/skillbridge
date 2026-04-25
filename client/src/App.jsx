@@ -12,6 +12,7 @@ import LandingPage from './pages/LandingPage';
 import TrackingPage from './pages/TrackingPage';
 import SOSPage from './pages/SOSPage';
 import TripHistory from './pages/TripHistory';
+import TripSharePage from './pages/TripSharePage';
 import SOSButton from './components/SOSButton';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -28,6 +29,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/share/:tripId" element={<TripSharePage />} />
 
           {/* Protected Routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

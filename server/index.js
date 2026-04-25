@@ -28,6 +28,7 @@ app.get('/', (req, res) => res.send('SafeRoute API Active'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/sos', require('./routes/sos'));
 app.use('/api/routes', require('./routes/routes'));
+app.use('/api/monitor', require('./routes/monitor'));
 app.use('/api/trips', require('./routes/trips'));
 app.use('/api/contacts', require('./routes/contacts'));
 app.use('/api/subscription', require('./routes/subscription'));
