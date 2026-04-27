@@ -1,51 +1,101 @@
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const express = require("express");
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 const router = express.Router();
 
-router.post('/register', async (req, res) => {
+/* ================= REGISTER ================= */
+router.post("/register", async (req, res) => {
     console.log(">>> REGISTER ATTEMPT:", req.body);
+
     try {
         const { name, email, password } = req.body;
-        
-        console.log("Checking for existing user...");
+
+        /* VALIDATION */
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
+
+        /* CHECK EXISTING USER */
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            console.log("User already exists:", email);
             return res.status(400).json({ message: "User already exists" });
         }
 
-        console.log("Creating new user instance...");
+        /* CREATE USER */
         const user = new User({ name, email, password });
-        
-        console.log("Saving user to DB...");
         await user.save();
-        console.log("User saved successfully!");
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-        res.status(201).json({ 
+        /* CREATE TOKEN */
+        const token = jwt.sign(
+            { id: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+        );
+
+        res.status(201).json({
             success: true,
             message: "User created successfully",
-            token, 
-            user: { id: user._id, name: user.name, email: user.email, role: user.role } 
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                subscription: user.subscription
+            }
         });
+
     } catch (err) {
-        console.error("!!! REGISTER CRASH !!!", err);
+        console.error("REGISTER ERROR:", err);
         res.status(500).json({ message: err.message || "Registration failed" });
     }
 });
 
-router.post('/login', async (req, res) => {
+/* ================= LOGIN ================= */
+router.post("/login", async (req, res) => {
+    console.log(">>> LOGIN ATTEMPT:", req.body);
+
     try {
         const { email, password } = req.body;
-        const user = await User.findOne({ email });
-        if (!user || !(await user.comparePassword(password))) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+
+        /* VALIDATION */
+        if (!email || !password) {
+            return res.status(400).json({ message: "All fields are required" });
         }
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-        res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role, subscription: user.subscription } });
+        /* FIND USER */
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: "User not found" });
+        }
+
+        /* CHECK PASSWORD */
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid credentials" });
+        }
+
+        /* CREATE TOKEN */
+        const token = jwt.sign(
+            { id: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+        );
+
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                subscription: user.subscription
+            }
+        });
+
     } catch (err) {
+        console.error("LOGIN ERROR:", err);
         res.status(500).json({ message: err.message });
     }
 });
