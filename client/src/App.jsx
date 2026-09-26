@@ -1,54 +1,106 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import MapPage from './pages/MapPage';
-import Profile from './pages/Profile';
-import Subscription from './pages/Subscription';
-import AdminDashboard from './pages/AdminDashboard';
-import LandingPage from './pages/LandingPage';
-import TrackingPage from './pages/TrackingPage';
-import SOSPage from './pages/SOSPage';
-import TripHistory from './pages/TripHistory';
-import TripSharePage from './pages/TripSharePage';
-import SOSButton from './components/SOSButton';
-import ProtectedRoute from './components/ProtectedRoute';
+import {
+    BrowserRouter,
+    Routes,
+    Route,
+    Navigate
+} from "react-router-dom"
+
+import { ApplicationProvider } from "./context/application-context"
+import { InterviewProvider } from "./context/interview-context"
+
+import Layout from "./components/layout/layout"
+
+import Dashboard from "./pages/dashboard"
+import Jobs from "./pages/jobs"
+import Applications from "./pages/applications"
+import ApplicationDetails from "./pages/application-details"
+import Interviews from "./pages/interviews"
+import CareerTools from "./pages/career-tools"
+import Analytics from "./pages/analytics"
+import Profile from "./pages/profile"
+import Settings from "./pages/settings"
 
 function App() {
-  const token = localStorage.getItem('token');
+    return (
+        <BrowserRouter>
+            <ApplicationProvider>
+                <InterviewProvider>
+                    <Routes>
 
-  return (
-    <Router>
-      <div className="min-h-screen bg-slate-950 text-white relative">
-        <Toaster position="top-center" reverseOrder={false} />
-        
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/share/:tripId" element={<TripSharePage />} />
+                        <Route element={<Layout />}>
 
-          {/* Protected Routes */}
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
-          <Route path="/tracking" element={<ProtectedRoute><TrackingPage /></ProtectedRoute>} />
-          <Route path="/sos" element={<ProtectedRoute><SOSPage /></ProtectedRoute>} />
-          <Route path="/history" element={<ProtectedRoute><TripHistory /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+                            <Route
+                                path="/"
+                                element={
+                                    <Navigate
+                                        to="/dashboard"
+                                        replace
+                                    />
+                                }
+                            />
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        
-        {token && <SOSButton />}
-      </div>
-    </Router>
-  );
+                            <Route
+                                path="/dashboard"
+                                element={<Dashboard />}
+                            />
+
+                            <Route
+                                path="/jobs"
+                                element={<Jobs />}
+                            />
+
+                            <Route
+                                path="/applications"
+                                element={<Applications />}
+                            />
+
+                            <Route
+                                path="/applications/:id"
+                                element={<ApplicationDetails />}
+                            />
+
+                            <Route
+                                path="/interviews"
+                                element={<Interviews />}
+                            />
+
+                            <Route
+                                path="/career-tools"
+                                element={<CareerTools />}
+                            />
+
+                            <Route
+                                path="/analytics"
+                                element={<Analytics />}
+                            />
+
+                            <Route
+                                path="/profile"
+                                element={<Profile />}
+                            />
+
+                            <Route
+                                path="/settings"
+                                element={<Settings />}
+                            />
+
+                            <Route
+                                path="*"
+                                element={
+                                    <Navigate
+                                        to="/dashboard"
+                                        replace
+                                    />
+                                }
+                            />
+
+                        </Route>
+
+                    </Routes>
+                </InterviewProvider>
+            </ApplicationProvider>
+        </BrowserRouter>
+    )
 }
 
-export default App;
+export default App

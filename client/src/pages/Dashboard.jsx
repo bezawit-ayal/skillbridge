@@ -1,117 +1,317 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Play, MapPin, Navigation, History, ShieldCheck, LogOut } from 'lucide-react';
+import {
+    Briefcase,
+    CalendarDays,
+    Bookmark,
+    FileCheck,
+    ArrowRight
+} from "lucide-react"
 
-const Dashboard = () => {
-  const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const [startPoint, setStartPoint] = useState('');
-  const [destination, setDestination] = useState('');
+import { useApplications } from "../context/application-context"
+import { useInterviews } from "../context/interview-context"
+function Dashboard() {
 
-  const handleStartTrip = () => {
-    if (!destination) return alert('Please enter a destination');
-    navigate('/map', { state: { startPoint, destination } });
-  };
+    const { applications } = useApplications()
+    const { interviews } = useInterviews()
+    const upcomingInterviews = interviews
+        .filter((interview) => interview.status === "Upcoming")
+        .sort((a, b) => {
+            const dateA = new Date(`${a.date}T${a.time}`)
+            const dateB = new Date(`${b.date}T${b.time}`)
 
-  const logout = () => {
-    localStorage.clear();
-    window.location.href = '/login';
-  };
+            return dateA - dateB
+        })
+        .slice(0, 3)
+    const recentApplications = [...applications]
+        .sort((a, b) => b.id - a.id)
+        .slice(0, 5)
+    const pipelineStatuses = [
+        "Saved",
+        "Applied",
+        "Screening",
+        "Interview",
+        "Offer",
+        "Accepted",
+        "Rejected"
+    ]
 
-  return (
-    <div className="max-w-6xl mx-auto p-6 pt-12">
-      <header className="flex justify-between items-center mb-12">
-        <div>
-          <h1 className="text-4xl font-extrabold mb-2">Welcome, {user.name}</h1>
-          <div className="flex items-center gap-2 text-slate-400">
-            <ShieldCheck size={18} className="text-accent" />
-            <span>Plan: {user.subscription?.plan || 'Free'}</span>
-          </div>
-        </div>
-        <button onClick={logout} className="p-3 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-all">
-          <LogOut size={24} />
-        </button>
-      </header>
+    const pipeline = pipelineStatuses.map((status) => ({
+        status,
+        count: applications.filter(
+            (application) => application.status === status
+        ).length
+    }))
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Action Area */}
-        <div className="lg:col-span-2 space-y-8">
-          <div className="glass p-8 rounded-3xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-red-600/20 transition-all"></div>
-            
-            <h2 className="text-2xl font-bold mb-6">Start a New Safe Trip</h2>
-            
-            <div className="space-y-4 mb-8">
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
-                <input
-                  type="text"
-                  placeholder="Starting Location (or Current Location)"
-                  className="w-full bg-slate-800/50 border border-white/10 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-secondary transition-all"
-                  value={startPoint}
-                  onChange={(e) => setStartPoint(e.target.value)}
-                />
-              </div>
-              <div className="relative">
-                <Navigation className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
-                <input
-                  type="text"
-                  placeholder="Where are you going?"
-                  className="w-full bg-slate-800/50 border border-white/10 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-red-600 transition-all"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                />
-              </div>
+    const totalApplications = applications.length
+
+    const interviewsCount = interviews.length
+
+    const offers = applications.filter(
+        application => application.status === "Offer"
+    ).length
+
+    const saved = applications.filter(
+        application => application.status === "Saved"
+    ).length
+
+    const applied = applications.filter(
+        application => application.status === "Applied"
+    ).length
+
+    return (
+        <div className="dashboard-page">
+
+            <section className="dashboard-intro">
+
+                <div>
+                    <span className="section-label">
+                        Career overview
+                    </span>
+
+                    <h2>Your job search at a glance</h2>
+
+                    <p>
+                        Track your applications, interviews and career progress
+                        from one place.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    className="primary-button"
+                >
+                    Find Jobs
+                    <ArrowRight size={17} />
+                </button>
+
+            </section>
+
+            <section className="dashboard-card upcoming-interviews-card">
+
+                <div className="card-header">
+                    <div>
+                        <h3>Upcoming Interviews</h3>
+                        <p>Your next scheduled interviews</p>
+                    </div>
+                </div>
+
+                {upcomingInterviews.length === 0 ? (
+
+                    <div className="dashboard-empty">
+                        <p>No upcoming interviews.</p>
+                    </div>
+
+                ) : (
+
+                    <div className="upcoming-interviews-list">
+
+                        {upcomingInterviews.map((interview) => {
+
+                            const application = applications.find(
+                                (application) =>
+                                    String(application.id) ===
+                                    String(interview.applicationId)
+                            )
+
+                            return (
+                                <div
+                                    className="upcoming-interview-item"
+                                    key={interview.id}
+                                >
+
+                                    <div className="upcoming-interview-date">
+                                        <strong>
+                                            {interview.date}
+                                        </strong>
+
+                                        <span>
+                                            {interview.time}
+                                        </span>
+                                    </div>
+
+                                    <div className="upcoming-interview-info">
+
+                                        <h4>
+                                            {interview.type}
+                                        </h4>
+
+                                        <p>
+                                            {application
+                                                ? `${application.position} at ${application.company}`
+                                                : "Application unavailable"}
+                                        </p>
+
+                                    </div>
+
+                                </div>
+                            )
+                        })}
+
+                    </div>
+                )}
+
+            </section>
+            <section className="stats-grid">
+
+                <div className="stat-card">
+
+                    <div className="stat-icon">
+                        <Briefcase size={20} />
+                    </div>
+
+                    <div>
+                        <span>Total Applications</span>
+                        <strong>{totalApplications}</strong>
+                    </div>
+
+                </div>
+
+
+                <div className="stat-card">
+
+                    <div className="stat-icon">
+                        <CalendarDays size={20} />
+                    </div>
+
+                    <div>
+                        <span>Interviews</span>
+                        <strong>{interviewsCount}</strong>
+                    </div>
+
+                </div>
+
+
+                <div className="stat-card">
+
+                    <div className="stat-icon">
+                        <Bookmark size={20} />
+                    </div>
+
+                    <div>
+                        <span>Saved Jobs</span>
+                        <strong>{saved}</strong>
+                    </div>
+
+                </div>
+
+
+                <div className="stat-card">
+
+                    <div className="stat-icon">
+                        <FileCheck size={20} />
+                    </div>
+
+                    <div>
+                        <span>Offers</span>
+                        <strong>{offers}</strong>
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <section className="dashboard-card pipeline-card">
+
+                <div className="card-header">
+                    <div>
+                        <h3>Application Pipeline</h3>
+                        <p>Track your applications by stage</p>
+                    </div>
+                </div>
+
+                <div className="pipeline-list">
+
+                    {pipeline.map((item) => (
+
+                        <div
+                            className="pipeline-item"
+                            key={item.status}
+                        >
+
+                            <div className="pipeline-item-info">
+
+                                <span className="pipeline-status">
+                                    {item.status}
+                                </span>
+
+                                <span className="pipeline-count">
+                                    {item.count}
+                                </span>
+
+                            </div>
+
+                            <div className="pipeline-bar">
+
+                                <div
+                                    className="pipeline-bar-fill"
+                                    style={{
+                                        width: `${applications.length
+                                            ? (item.count / applications.length) * 100
+                                            : 0}%`
+                                    }}
+                                />
+
+                            </div>
+
+                        </div>
+
+                    ))}
+
+                </div>
+
+            </section>
+
+
+            <div className="recent-applications-list">
+
+                {recentApplications.length === 0 ? (
+
+                    <div className="applications-empty">
+                        <p>No applications yet.</p>
+                    </div>
+
+                ) : (
+
+                    recentApplications.map((application) => (
+
+                        <div
+                            className="recent-application-item"
+                            key={application.id}
+                        >
+
+                            <div className="recent-application-info">
+
+                                <div className="application-company-icon">
+                                    {application.company
+                                        .charAt(0)
+                                        .toUpperCase()}
+                                </div>
+
+                                <div>
+                                    <h4>{application.position}</h4>
+                                    <p>{application.company}</p>
+                                </div>
+
+                            </div>
+
+                            <span
+                                className={`status-badge ${application.status
+                                    .toLowerCase()
+                                    .replace(" ", "-")}`}
+                            >
+                                {application.status}
+                            </span>
+
+                        </div>
+
+                    ))
+
+                )}
+
             </div>
 
-            <button 
-              onClick={handleStartTrip}
-              className="w-full btn-primary py-5 text-xl flex items-center justify-center gap-3 shadow-xl shadow-red-600/30"
-            >
-              <Play fill="currentColor" /> Start Safe Trip
-            </button>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 gap-4">
-            <button 
-              onClick={() => navigate('/history')}
-              className="glass p-6 rounded-2xl flex flex-col items-center gap-3 hover:bg-slate-800/80 transition-all"
-            >
-              <History size={28} className="text-secondary" />
-              <span className="font-semibold">Trip History</span>
-            </button>
-            <button 
-              onClick={() => navigate('/profile')}
-              className="glass p-6 rounded-2xl flex flex-col items-center gap-3 hover:bg-slate-800/80 transition-all"
-            >
-              <ShieldCheck size={28} className="text-accent" />
-              <span className="font-semibold">Emergency Contacts</span>
-            </button>
-          </div>
         </div>
+    )
+}
 
-        {/* Sidebar / Info */}
-        <div className="space-y-6">
-          <div className="glass p-6 rounded-2xl border-l-4 border-l-accent">
-            <h3 className="text-lg font-bold mb-2">Safety Tip</h3>
-            <p className="text-slate-400 text-sm">Always ensure your phone's battery is above 20% before starting a long trip.</p>
-          </div>
-
-          <div className="glass p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800">
-            <h3 className="text-lg font-bold mb-4">Subscription</h3>
-            <p className="text-slate-400 text-sm mb-4">Upgrade to Premium to enable Auto SOS and Real-time Tracking sharing.</p>
-            <button 
-              onClick={() => navigate('/subscription')}
-              className="w-full py-2 bg-white text-slate-950 font-bold rounded-lg hover:bg-slate-200 transition-all"
-            >
-              View Plans
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Dashboard;
+export default Dashboard

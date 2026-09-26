@@ -1,16 +1,55 @@
-# React + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# SkillBridge — Job Application & Career Tracking UI
 
-Currently, two official plugins are available:
+This replacement frontend recreates the SkillBridge job-application experience from the supplied UI references.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Included screens
 
-## React Compiler
+- Dashboard
+- Job Applications / Pipeline
+- Application Details
+- Application Analytics
+- Add Application
+- Edit Application
+- Profile
+- Settings
+- Responsive mobile bottom navigation
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Stack
 
-## Expanding the ESLint configuration
+- React
+- Vite
+- JavaScript
+- CSS
+- lucide-react icons
+- LocalStorage for temporary application persistence
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Install
+
+```bash
+npm install
+npm run dev
+```
+
+## Important
+
+This package is the **frontend/UI replacement**. It does not delete or modify the existing Node/Express server.
+
+The current frontend uses LocalStorage so the interface can be tested immediately. The next development step is to replace that storage layer with:
+
+React → Express API → MongoDB
+
+## Design direction
+
+The UI follows the supplied references:
+
+- light lavender/neutral background
+- white cards
+- blue primary actions
+- compact status badges
+- dashboard metrics
+- application pipeline
+- analytics
+- detailed hiring timeline
+- responsive mobile navigation
+- subtle shadows and rounded cards
