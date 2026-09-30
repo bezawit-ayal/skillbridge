@@ -1,3 +1,4 @@
+
 import {
     Briefcase,
     CalendarDays,
@@ -6,24 +7,32 @@ import {
     ArrowRight
 } from "lucide-react"
 
+import { useNavigate } from "react-router-dom"
+
 import { useApplications } from "../context/application-context"
 import { useInterviews } from "../context/interview-context"
+
 function Dashboard() {
+
+    const navigate = useNavigate()
 
     const { applications } = useApplications()
     const { interviews } = useInterviews()
+
     const upcomingInterviews = interviews
         .filter((interview) => interview.status === "Upcoming")
         .sort((a, b) => {
-            const dateA = new Date(`${a.date}T${a.time}`)
-            const dateB = new Date(`${b.date}T${b.time}`)
+            const dateA = new Date(`${a.date}T${a.time} `)
+            const dateB = new Date(`${b.date}T${b.time} `)
 
             return dateA - dateB
         })
         .slice(0, 3)
+
     const recentApplications = [...applications]
         .sort((a, b) => b.id - a.id)
         .slice(0, 5)
+
     const pipelineStatuses = [
         "Saved",
         "Applied",
@@ -46,15 +55,11 @@ function Dashboard() {
     const interviewsCount = interviews.length
 
     const offers = applications.filter(
-        application => application.status === "Offer"
+        (application) => application.status === "Offer"
     ).length
 
     const saved = applications.filter(
-        application => application.status === "Saved"
-    ).length
-
-    const applied = applications.filter(
-        application => application.status === "Applied"
+        (application) => application.status === "Saved"
     ).length
 
     return (
@@ -78,6 +83,7 @@ function Dashboard() {
                 <button
                     type="button"
                     className="primary-button"
+                    onClick={() => navigate("/jobs")}
                 >
                     Find Jobs
                     <ArrowRight size={17} />
@@ -136,7 +142,7 @@ function Dashboard() {
 
                                         <p>
                                             {application
-                                                ? `${application.position} at ${application.company}`
+                                                ? `${application.position} at ${application.company} `
                                                 : "Application unavailable"}
                                         </p>
 
@@ -150,117 +156,6 @@ function Dashboard() {
                 )}
 
             </section>
-            <section className="stats-grid">
-
-                <div className="stat-card">
-
-                    <div className="stat-icon">
-                        <Briefcase size={20} />
-                    </div>
-
-                    <div>
-                        <span>Total Applications</span>
-                        <strong>{totalApplications}</strong>
-                    </div>
-
-                </div>
-
-
-                <div className="stat-card">
-
-                    <div className="stat-icon">
-                        <CalendarDays size={20} />
-                    </div>
-
-                    <div>
-                        <span>Interviews</span>
-                        <strong>{interviewsCount}</strong>
-                    </div>
-
-                </div>
-
-
-                <div className="stat-card">
-
-                    <div className="stat-icon">
-                        <Bookmark size={20} />
-                    </div>
-
-                    <div>
-                        <span>Saved Jobs</span>
-                        <strong>{saved}</strong>
-                    </div>
-
-                </div>
-
-
-                <div className="stat-card">
-
-                    <div className="stat-icon">
-                        <FileCheck size={20} />
-                    </div>
-
-                    <div>
-                        <span>Offers</span>
-                        <strong>{offers}</strong>
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <section className="dashboard-card pipeline-card">
-
-                <div className="card-header">
-                    <div>
-                        <h3>Application Pipeline</h3>
-                        <p>Track your applications by stage</p>
-                    </div>
-                </div>
-
-                <div className="pipeline-list">
-
-                    {pipeline.map((item) => (
-
-                        <div
-                            className="pipeline-item"
-                            key={item.status}
-                        >
-
-                            <div className="pipeline-item-info">
-
-                                <span className="pipeline-status">
-                                    {item.status}
-                                </span>
-
-                                <span className="pipeline-count">
-                                    {item.count}
-                                </span>
-
-                            </div>
-
-                            <div className="pipeline-bar">
-
-                                <div
-                                    className="pipeline-bar-fill"
-                                    style={{
-                                        width: `${applications.length
-                                            ? (item.count / applications.length) * 100
-                                            : 0}%`
-                                    }}
-                                />
-
-                            </div>
-
-                        </div>
-
-                    ))}
-
-                </div>
-
-            </section>
-
 
             <div className="recent-applications-list">
 
@@ -295,9 +190,10 @@ function Dashboard() {
                             </div>
 
                             <span
-                                className={`status-badge ${application.status
+                                className={`status - badge ${application.status
                                     .toLowerCase()
-                                    .replace(" ", "-")}`}
+                                    .replace(" ", "-")
+                                    } `}
                             >
                                 {application.status}
                             </span>

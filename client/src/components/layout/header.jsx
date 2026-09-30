@@ -1,6 +1,12 @@
 import { Menu, Bell, Plus } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { useProfile } from "../../context/profile-context"
 
 function Header({ onMenuClick, onNewApplication }) {
+
+    const navigate = useNavigate()
+    const { profile } = useProfile()
+
     return (
         <header className="header">
 
@@ -17,7 +23,10 @@ function Header({ onMenuClick, onNewApplication }) {
 
                 <div className="page-heading">
                     <span>Welcome back</span>
-                    <h1>Good morning, Bezawit</h1>
+
+                    <h1>
+                        Good morning, {profile.name}
+                    </h1>
                 </div>
 
             </div>
@@ -30,8 +39,7 @@ function Header({ onMenuClick, onNewApplication }) {
                     className="add-button"
                     onClick={onNewApplication}
                 >
-                    <Plus size={18} />
-                    <span>New Application</span>
+                    <span>Add New Application</span>
                 </button>
 
 
@@ -41,6 +49,7 @@ function Header({ onMenuClick, onNewApplication }) {
                     aria-label="Notifications"
                 >
                     <Bell size={20} />
+
                     <span className="notification-dot"></span>
                 </button>
 
@@ -48,13 +57,22 @@ function Header({ onMenuClick, onNewApplication }) {
                 <button
                     type="button"
                     className="profile-button"
+                    onClick={() => navigate("/profile")}
                 >
                     <div className="profile-avatar">
-                        B
+                        {profile.avatarUrl ? (
+                            <img
+                                src={profile.avatarUrl}
+                                alt={profile.name}
+                                className="profile-avatar-image"
+                            />
+                        ) : (
+                            profile.name.charAt(0).toUpperCase()
+                        )}
                     </div>
 
                     <div className="profile-info">
-                        <strong>Bezawit Ayal</strong>
+                        <strong>{profile.name}</strong>
                         <span>Job Seeker</span>
                     </div>
                 </button>
