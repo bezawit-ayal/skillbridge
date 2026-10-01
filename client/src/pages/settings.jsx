@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { defaultSettings, useSettings } from "../context/settings-context"
 import {
     Settings as SettingsIcon,
     Bell,
@@ -6,21 +7,18 @@ import {
     CalendarClock,
     Briefcase,
     Lock,
-    Palette,
     Save,
     RotateCcw
 } from "lucide-react"
 
 function Settings() {
-    const [settings, setSettings] = useState({
-        emailNotifications: true,
-        interviewReminders: true,
-        jobAlerts: true,
-        profileVisibility: true,
-        appearance: "Light"
-    })
-
+    const { settings: savedSettings, saveSettings, resetSettings } = useSettings()
+    const [settings, setSettings] = useState(savedSettings)
     const [saved, setSaved] = useState(false)
+
+    useEffect(() => {
+        setSettings(savedSettings)
+    }, [savedSettings])
 
     function handleToggle(name) {
         setSettings((currentSettings) => ({
@@ -31,33 +29,19 @@ function Settings() {
         setSaved(false)
     }
 
-    function handleAppearanceChange(event) {
-        setSettings((currentSettings) => ({
-            ...currentSettings,
-            appearance: event.target.value
-        }))
-
-        setSaved(false)
-    }
-
     function handleSave() {
-        setSaved(true)
-
-        setTimeout(() => {
+        try {
+            saveSettings(settings)
+            setSaved(true)
+        } catch {
             setSaved(false)
-        }, 2500)
+        }
     }
 
     function handleReset() {
-        setSettings({
-            emailNotifications: true,
-            interviewReminders: true,
-            jobAlerts: true,
-            profileVisibility: true,
-            appearance: "Light"
-        })
-
-        setSaved(false)
+        resetSettings()
+        setSettings(defaultSettings)
+        setSaved(true)
     }
 
     return (
@@ -109,8 +93,8 @@ function Settings() {
                         <button
                             type="button"
                             className={`settings-switch ${settings.emailNotifications
-                                    ? "active"
-                                    : ""
+                                ? "active"
+                                : ""
                                 }`}
                             onClick={() =>
                                 handleToggle("emailNotifications")
@@ -139,8 +123,8 @@ function Settings() {
                         <button
                             type="button"
                             className={`settings-switch ${settings.interviewReminders
-                                    ? "active"
-                                    : ""
+                                ? "active"
+                                : ""
                                 }`}
                             onClick={() =>
                                 handleToggle("interviewReminders")
@@ -169,8 +153,8 @@ function Settings() {
                         <button
                             type="button"
                             className={`settings-switch ${settings.jobAlerts
-                                    ? "active"
-                                    : ""
+                                ? "active"
+                                : ""
                                 }`}
                             onClick={() =>
                                 handleToggle("jobAlerts")
@@ -182,47 +166,6 @@ function Settings() {
                         </button>
 
                     </div>
-
-                </div>
-
-            </section>
-
-            <section className="settings-card">
-
-                <div className="settings-section-header">
-                    <div>
-                        <h2>Appearance</h2>
-                        <p>
-                            Customize how SkillBridge looks for you.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="settings-preference-row">
-
-                    <div className="settings-preference-info">
-
-                        <div className="settings-row-icon">
-                            <Palette size={18} />
-                        </div>
-
-                        <div>
-                            <h3>Theme</h3>
-                            <p>
-                                Choose your preferred appearance.
-                            </p>
-                        </div>
-
-                    </div>
-
-                    <select
-                        className="settings-select"
-                        value={settings.appearance}
-                        onChange={handleAppearanceChange}
-                    >
-                        <option value="Light">Light</option>
-                        <option value="Dark">Dark</option>
-                    </select>
 
                 </div>
 
@@ -248,16 +191,16 @@ function Settings() {
                     <div className="settings-row-content">
                         <h3>Profile Visibility</h3>
                         <p>
-                            Allow your professional profile to be visible to
-                            employers.
+                            Save whether your professional profile should be
+                            visible to employers.
                         </p>
                     </div>
 
                     <button
                         type="button"
                         className={`settings-switch ${settings.profileVisibility
-                                ? "active"
-                                : ""
+                            ? "active"
+                            : ""
                             }`}
                         onClick={() =>
                             handleToggle("profileVisibility")
