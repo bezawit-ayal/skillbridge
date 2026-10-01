@@ -1,96 +1,113 @@
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
+import { useAuth } from "./AuthContext"
+import { apiRequest } from "../services/api"
 
 const ApplicationContext = createContext(null)
 
-const initialApplications = [
-    {
-        id: 1,
-        company: "Tech Solutions",
-        position: "Frontend Developer",
-        location: "Addis Ababa",
-        salary: "",
-        jobType: "Full-time",
-        status: "Applied",
-        appliedDate: "",
-        jobUrl: "",
-        notes: ""
-    },
-    {
-        id: 2,
-        company: "Digital Ethiopia",
-        position: "React Developer",
-        location: "Remote",
-        salary: "",
-        jobType: "Remote",
-        status: "Interview",
-        appliedDate: "",
-        jobUrl: "",
-        notes: ""
-    },
-    {
-        id: 3,
-        company: "Web Systems",
-        position: "Junior Developer",
-        location: "Addis Ababa",
-        salary: "",
-        jobType: "Full-time",
-        status: "Applied",
-        appliedDate: "",
-        jobUrl: "",
-        notes: ""
-    },
-    {
-        id: 4,
-        company: "Software Hub",
-        position: "Frontend Developer",
-        location: "Remote",
-        salary: "",
-        jobType: "Remote",
-        status: "Offer",
-        appliedDate: "",
-        jobUrl: "",
-        notes: ""
+function normalizeApplication(application) {
+    return {
+        ...application,
+        jobType: application.job_type || application.jobType || "",
+        appliedDate: application.applied_date || application.appliedDate || "",
+        jobUrl: application.job_url || application.jobUrl || ""
     }
-]
+}
+
+function serializeApplication(application) {
+    return JSON.stringify({
+        company: application.company,
+        position: application.position,
+        status: application.status,
+        location: application.location,
+        salary: application.salary,
+        job_type: application.jobType,
+        job_url: application.jobUrl,
+        notes: application.notes,
+        applied_date: application.appliedDate
+    })
+}
 
 export function ApplicationProvider({ children }) {
+    const { token } = useAuth()
+    const [applications, setApplications] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState("")
 
-    const [applications, setApplications] = useState(
-        initialApplications
-    )
+    async function refreshApplications() {
+        if (!token) {
+            setApplications([])
+            setLoading(false)
+            return
+        }
 
-    function addApplication(application) {
-
-        setApplications((currentApplications) => [
-            ...currentApplications,
-            application
-        ])
+        try {
+            setLoading(true)
+            setError("")
+            const data = await apiRequest("applications")
+            setApplications((data.applications || []).map(normalizeApplication))
+        } catch (requestError) {
+            setError(requestError.message || "Could not load applications")
+        } finally {
+            setLoading(false)
+        }
     }
 
-    function updateApplication(application) {
+    useEffect(() => {
+        refreshApplications()
+    }, [token])
 
-        setApplications((currentApplications) =>
-            currentApplications.map((currentApplication) =>
-                currentApplication.id === application.id
-                    ? application
-                    : currentApplication
-            )
-        )
+    async function addApplication(application) {
+        try {
+            setError("")
+            const data = await apiRequest("applications", {
+                method: "POST",
+                body: serializeApplication(application)
+            })
+            const savedApplication = normalizeApplication(data.application)
+            setApplications((current) => [savedApplication, ...current])
+            return savedApplication
+        } catch (requestError) {
+            setError(requestError.message || "Could not save application")
+            return null
+        }
     }
 
-    function deleteApplication(id) {
+    async function updateApplication(application) {
+        try {
+            setError("")
+            await apiRequest(`applications/${application.id}`, {
+                method: "PUT",
+                body: serializeApplication(application)
+            })
+            setApplications((current) => current.map((item) =>
+                item.id === application.id ? application : item
+            ))
+            return true
+        } catch (requestError) {
+            setError(requestError.message || "Could not update application")
+            return false
+        }
+    }
 
-        setApplications((currentApplications) =>
-            currentApplications.filter(
-                (application) => application.id !== id
-            )
-        )
+    async function deleteApplication(id) {
+        try {
+            setError("")
+            await apiRequest(`applications/${id}`, { method: "DELETE" })
+            setApplications((current) => current.filter((item) => item.id !== id))
+            return true
+        } catch (requestError) {
+            setError(requestError.message || "Could not delete application")
+            return false
+        }
     }
 
     return (
         <ApplicationContext.Provider
             value={{
                 applications,
+                loading,
+                error,
+                refreshApplications,
                 setApplications,
                 addApplication,
                 updateApplication,

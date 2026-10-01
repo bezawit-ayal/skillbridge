@@ -25,6 +25,10 @@ function ApplicationDetails() {
         applications,
         deleteApplication
     } = useApplications()
+    const {
+        setEditingApplication,
+        setShowApplicationForm
+    } = useOutletContext()
 
     const application = applications.find(
         (item) => String(item.id) === String(id)
@@ -115,9 +119,10 @@ function ApplicationDetails() {
                     <button
                         type="button"
                         className="secondary-button"
-                        onClick={() =>
-                            alert("Edit Application will be added next.")
-                        }
+                        onClick={() => {
+                            setEditingApplication(application)
+                            setShowApplicationForm(true)
+                        }}
                     >
                         <Pencil size={17} />
                         Edit

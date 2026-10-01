@@ -4,7 +4,8 @@ import { X } from "lucide-react"
 function AddApplication({
     onClose,
     onAdd,
-    initialApplication = null
+    initialApplication = null,
+    error = ""
 }) {
 
     const isEditing = Boolean(initialApplication)
@@ -20,6 +21,7 @@ function AddApplication({
         jobUrl: initialApplication?.jobUrl || "",
         notes: initialApplication?.notes || ""
     })
+    const [isSaving, setIsSaving] = useState(false)
 
     function handleChange(event) {
         const { name, value } = event.target
@@ -30,7 +32,7 @@ function AddApplication({
         }))
     }
 
-    function saveApplication() {
+    async function saveApplication() {
 
         if (!formData.company.trim()) {
             alert("Please enter the company name.")
@@ -48,14 +50,17 @@ function AddApplication({
             id: initialApplication?.id || Date.now()
         }
 
-        console.log("SAVING APPLICATION:", application)
-
-        onAdd(application)
+        setIsSaving(true)
+        try {
+            await onAdd(application)
+        } finally {
+            setIsSaving(false)
+        }
     }
 
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
         event.preventDefault()
-        saveApplication()
+        await saveApplication()
     }
 
     return (
@@ -88,6 +93,8 @@ function AddApplication({
                     </button>
 
                 </div>
+
+                {error && <div className="app-error" role="alert">{error}</div>}
 
                 <form
                     className="application-form"
@@ -247,11 +254,13 @@ function AddApplication({
                         </button>
 
                         <button
-                            type="button"
+                            type="submit"
                             className="save-button"
-                            onClick={saveApplication}
+                            disabled={isSaving}
                         >
-                            {isEditing
+                            {isSaving
+                                ? "Saving..."
+                                : isEditing
                                 ? "Save Changes"
                                 : "Add Application"}
                         </button>

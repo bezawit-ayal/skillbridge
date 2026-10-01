@@ -6,12 +6,14 @@ import { useApplications } from "../../context/application-context"
 function AddInterview({
     onClose,
     onAdd,
-    initialInterview = null
+    initialInterview = null,
+    error = ""
 }) {
 
     const { applications } = useApplications()
 
     const isEditing = Boolean(initialInterview)
+    const [isSaving, setIsSaving] = useState(false)
 
     const [formData, setFormData] = useState({
         applicationId: initialInterview?.applicationId || "",
@@ -35,7 +37,7 @@ function AddInterview({
     }
 
 
-    function saveInterview() {
+    async function saveInterview() {
 
         if (!formData.applicationId) {
             alert("Please select an application.")
@@ -60,17 +62,20 @@ function AddInterview({
             status: initialInterview?.status || "Upcoming"
         }
 
-        console.log("SAVING INTERVIEW:", interview)
-
-        onAdd(interview)
+        setIsSaving(true)
+        try {
+            await onAdd(interview)
+        } finally {
+            setIsSaving(false)
+        }
     }
 
 
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
 
         event.preventDefault()
 
-        saveInterview()
+        await saveInterview()
     }
 
 
@@ -107,6 +112,8 @@ function AddInterview({
                     </button>
 
                 </div>
+
+                {error && <div className="app-error" role="alert">{error}</div>}
 
 
                 <form
@@ -306,11 +313,13 @@ function AddInterview({
 
 
                         <button
-                            type="button"
+                            type="submit"
                             className="save-button"
-                            onClick={saveInterview}
+                            disabled={isSaving}
                         >
-                            {isEditing
+                            {isSaving
+                                ? "Saving..."
+                                : isEditing
                                 ? "Save Changes"
                                 : "Add Interview"}
                         </button>

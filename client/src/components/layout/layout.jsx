@@ -21,32 +21,22 @@ function Layout() {
     // Get application functions from Context
     const {
         addApplication,
-        updateApplication
+        updateApplication,
+        error: applicationError
     } = useApplications()
 
+    async function handleSaveApplication(application) {
+        const saved = editingApplication
+            ? await updateApplication(application)
+            : await addApplication(application)
 
-    function handleSaveApplication(application) {
-
-        console.log("LAYOUT RECEIVED:", application)
-
-        if (editingApplication) {
-
-            console.log("UPDATING APPLICATION")
-
-            updateApplication(application)
-
-        } else {
-
-            console.log("ADDING APPLICATION")
-
-            addApplication(application)
+        if (!saved) {
+            return false
         }
 
-        // Close modal
         setShowApplicationForm(false)
-
-        // Clear editing state
         setEditingApplication(null)
+        return true
     }
 
 
@@ -85,6 +75,12 @@ function Layout() {
 
                 <main className="page-content">
 
+                    {applicationError && (
+                        <div className="app-error" role="alert">
+                            {applicationError}
+                        </div>
+                    )}
+
                     <Outlet
                         context={{
                             setEditingApplication,
@@ -109,6 +105,8 @@ function Layout() {
                     onAdd={handleSaveApplication}
 
                     initialApplication={editingApplication}
+
+                    error={applicationError}
 
                 />
 

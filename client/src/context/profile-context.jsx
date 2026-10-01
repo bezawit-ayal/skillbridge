@@ -1,38 +1,85 @@
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
+import { useAuth } from "./AuthContext"
+import { apiRequest } from "../services/api"
 
 const ProfileContext = createContext(null)
 
-const initialProfile = {
-    name: "Bezawit Ayal",
-    email: "bezawit@example.com",
-    location: "Bahir Dar, Ethiopia",
-    headline: "Full Stack Developer",
-    bio: "Passionate developer focused on building modern and practical web applications.",
-    experience: "3+ years",
-    education: "Computer Science",
+const emptyProfile = {
+    name: "",
+    email: "",
+    location: "",
+    headline: "",
+    bio: "",
+    experience: "",
+    education: "",
     github: "",
     linkedin: "",
     portfolio: "",
     avatarUrl: "",
-    skills: [
-        "HTML",
-        "CSS",
-        "JavaScript",
-        "React",
-        "Node.js",
-        "PHP",
-        "MySQL"
-    ]
+    skills: []
 }
 
 export function ProfileProvider({ children }) {
-    const [profile, setProfile] = useState(initialProfile)
+    const { token, user } = useAuth()
+    const [profile, setProfile] = useState(() => {
+        return { ...emptyProfile, name: user?.name || "", email: user?.email || "" }
+    })
+    const [loading, setLoading] = useState(Boolean(token))
+    const [error, setError] = useState("")
+
+    useEffect(() => {
+        let active = true
+        if (!token) {
+            setProfile({ ...emptyProfile, name: user?.name || "", email: user?.email || "" })
+            setLoading(false)
+            return () => { active = false }
+        }
+
+        setLoading(true)
+        apiRequest("user-data/profile")
+            .then(({ profile: storedProfile }) => {
+                if (active) {
+                    setProfile({
+                        ...emptyProfile,
+                        ...storedProfile,
+                        name: storedProfile?.name || user?.name || "",
+                        email: storedProfile?.email || user?.email || ""
+                    })
+                }
+            })
+            .catch((requestError) => {
+                if (active) setError(requestError.message || "Could not load profile")
+            })
+            .finally(() => {
+                if (active) setLoading(false)
+            })
+
+        return () => { active = false }
+    }, [token, user])
+
+    async function saveProfile(nextProfile) {
+        try {
+            setError("")
+            const data = await apiRequest("user-data/profile", {
+                method: "PUT",
+                body: JSON.stringify(nextProfile)
+            })
+            setProfile({ ...emptyProfile, ...data.profile })
+            return true
+        } catch (requestError) {
+            setError(requestError.message || "Could not save profile")
+            return false
+        }
+    }
 
     return (
         <ProfileContext.Provider
             value={{
                 profile,
-                setProfile
+                setProfile,
+                saveProfile,
+                loading,
+                error
             }}
         >
             {children}

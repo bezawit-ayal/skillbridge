@@ -77,9 +77,7 @@ function Dashboard() {
                             Career dashboard
                         </span>
 
-                        <h1>
-                            Welcome back
-                        </h1>
+                        <h1>Your job search</h1>
 
                         <p>
                             Stay on top of your job search and focus on

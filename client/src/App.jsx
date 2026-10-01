@@ -24,19 +24,42 @@ import Analytics from "./pages/analytics"
 import Profile from "./pages/profile"
 import { ProfileProvider } from "./context/profile-context"
 import { SettingsProvider } from "./context/settings-context"
+import { AuthProvider, useAuth } from "./context/AuthContext"
 import Settings from "./pages/settings"
+import Login from "./pages/login"
+import Register from "./pages/register"
+import { useLocation } from "react-router-dom"
 
+function RequireAuth({ children }) {
+    const { token } = useAuth()
+    const location = useLocation()
+
+    return token
+        ? children
+        : <Navigate to="/login" replace state={{ from: location.pathname }} />
+}
 
 function App() {
     return (
         <BrowserRouter>
-            <SettingsProvider>
-                <ProfileProvider>
-                    <ApplicationProvider>
-                        <InterviewProvider>
+            <AuthProvider>
+                <SettingsProvider>
+                    <ProfileProvider>
+                        <ApplicationProvider>
+                            <InterviewProvider>
                             <Routes>
 
-                                <Route element={<Layout />}>
+                                <Route
+                                    path="/login"
+                                    element={<Login />}
+                                />
+
+                                <Route
+                                    path="/register"
+                                    element={<Register />}
+                                />
+
+                                <Route element={<RequireAuth><Layout /></RequireAuth>}>
 
                                     <Route
                                         path="/"
@@ -107,7 +130,6 @@ function App() {
                                         path="/settings"
                                         element={<Settings />}
                                     />
-
                                     <Route
                                         path="*"
                                         element={
@@ -121,10 +143,11 @@ function App() {
                                 </Route>
 
                             </Routes>
-                        </InterviewProvider>
-                    </ApplicationProvider>
-                </ProfileProvider>
-            </SettingsProvider>
+                            </InterviewProvider>
+                        </ApplicationProvider>
+                    </ProfileProvider>
+                </SettingsProvider>
+            </AuthProvider>
         </BrowserRouter>
     )
 }

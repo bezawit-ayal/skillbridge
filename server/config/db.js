@@ -1,14 +1,39 @@
-const mongoose = require('mongoose');
+const mysql = require("mysql2/promise")
+
+const requiredDatabaseConfig = ["DB_HOST", "DB_USER", "DB_NAME"]
+const missingDatabaseConfig = requiredDatabaseConfig.filter(
+    (key) => !process.env[key]
+)
+
+if (missingDatabaseConfig.length) {
+    throw new Error(`Missing database configuration: ${missingDatabaseConfig.join(", ")}`)
+}
+
+const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+})
 
 const connectDB = async () => {
-    const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/skillbridge';
-
     try {
-        await mongoose.connect(mongoUri);
-        console.log('MongoDB connected');
-    } catch (error) {
-        console.warn('MongoDB connection failed, app will use in-memory fallback data:', error.message);
-    }
-};
+        const connection = await pool.getConnection()
 
-module.exports = connectDB;
+        console.log("MySQL connected successfully")
+
+        connection.release()
+    } catch (error) {
+        console.error("MySQL connection failed:", error.message)
+        throw error
+    }
+}
+
+module.exports = {
+    pool,
+    connectDB
+}

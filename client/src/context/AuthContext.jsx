@@ -4,8 +4,11 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(() => {
-        const stored = localStorage.getItem('skillbridge-user');
-        return stored ? JSON.parse(stored) : null;
+        try {
+            return JSON.parse(localStorage.getItem('skillbridge-user') || 'null');
+        } catch {
+            return null;
+        }
     });
     const [token, setToken] = useState(() => localStorage.getItem('skillbridge-token') || '');
 
@@ -25,6 +28,15 @@ export function AuthProvider({ children }) {
         }
     }, [token]);
 
+    useEffect(() => {
+        const clearSession = () => {
+            setUser(null);
+            setToken('');
+        };
+        window.addEventListener('skillbridge:unauthorized', clearSession);
+        return () => window.removeEventListener('skillbridge:unauthorized', clearSession);
+    }, []);
+
     const value = useMemo(() => ({
         user,
         token,
@@ -33,6 +45,7 @@ export function AuthProvider({ children }) {
         logout: () => {
             setUser(null);
             setToken('');
+            localStorage.removeItem('skillbridge-profile');
         },
     }), [user, token]);
 

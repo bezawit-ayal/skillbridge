@@ -12,7 +12,7 @@ import {
 } from "lucide-react"
 
 function Settings() {
-    const { settings: savedSettings, saveSettings, resetSettings } = useSettings()
+    const { settings: savedSettings, saveSettings, resetSettings, error } = useSettings()
     const [settings, setSettings] = useState(savedSettings)
     const [saved, setSaved] = useState(false)
 
@@ -29,19 +29,16 @@ function Settings() {
         setSaved(false)
     }
 
-    function handleSave() {
-        try {
-            saveSettings(settings)
-            setSaved(true)
-        } catch {
-            setSaved(false)
-        }
+    async function handleSave() {
+        setSaved(await saveSettings(settings))
     }
 
-    function handleReset() {
-        resetSettings()
-        setSettings(defaultSettings)
-        setSaved(true)
+    async function handleReset() {
+        const wasSaved = await resetSettings()
+        if (wasSaved) {
+            setSettings(defaultSettings)
+            setSaved(true)
+        }
     }
 
     return (
@@ -237,6 +234,8 @@ function Settings() {
                 </button>
 
             </div>
+
+            {error && <div className="app-error" role="alert">{error}</div>}
 
         </div>
     )

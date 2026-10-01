@@ -18,6 +18,7 @@ function Interviews() {
 
     const {
         interviews,
+        error,
         addInterview,
         updateInterview,
         deleteInterview
@@ -40,16 +41,12 @@ function Interviews() {
     }
 
 
-    function handleSaveInterview(interview) {
+    async function handleSaveInterview(interview) {
+        const result = editingInterview
+            ? await updateInterview(interview)
+            : await addInterview(interview)
 
-        if (editingInterview) {
-
-            updateInterview(interview)
-
-        } else {
-
-            addInterview(interview)
-        }
+        if (!result) return
 
         setShowForm(false)
         setEditingInterview(null)
@@ -64,7 +61,7 @@ function Interviews() {
         setOpenMenu(null)
     }
 
-    function handleDeleteInterview(id) {
+    async function handleDeleteInterview(id) {
 
         const confirmed = window.confirm(
             "Are you sure you want to delete this interview?"
@@ -72,15 +69,15 @@ function Interviews() {
 
         if (confirmed) {
 
-            deleteInterview(id)
-
-            setOpenMenu(null)
+            if (await deleteInterview(id)) setOpenMenu(null)
         }
     }
 
 
     return (
         <div className="interviews-page">
+
+            {error && <div className="app-error" role="alert">{error}</div>}
 
             <div className="page-heading">
 
@@ -349,6 +346,7 @@ function Interviews() {
                     }}
                     onAdd={handleSaveInterview}
                     initialInterview={editingInterview}
+                    error={error}
                 />
 
             )}

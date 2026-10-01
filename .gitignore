@@ -1,18 +1,7 @@
-# Dependency directories
 node_modules/
-
-# Environment variables
+dist/
 .env
 .env.local
-
-# Build outputs
-dist/
-build/
-
-# IDE files
+.env.*.local
 .vscode/
-.idea/
-
-# OS files
-.DS_Store
-Thumbs.db
+*.log

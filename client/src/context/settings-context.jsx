@@ -1,4 +1,6 @@
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
+import { useAuth } from "./AuthContext"
+import { apiRequest } from "../services/api"
 
 const SettingsContext = createContext(null)
 
@@ -9,34 +11,54 @@ export const defaultSettings = {
     profileVisibility: true
 }
 
-const storageKey = "skillbridge-settings"
-
-function loadSettings() {
-    try {
-        const stored = localStorage.getItem(storageKey)
-        return stored
-            ? { ...defaultSettings, ...JSON.parse(stored) }
-            : defaultSettings
-    } catch {
-        return defaultSettings
-    }
-}
-
 export function SettingsProvider({ children }) {
-    const [settings, setSettings] = useState(loadSettings)
+    const { token } = useAuth()
+    const [settings, setSettings] = useState(defaultSettings)
+    const [error, setError] = useState("")
 
-    function saveSettings(nextSettings) {
-        localStorage.setItem(storageKey, JSON.stringify(nextSettings))
-        setSettings(nextSettings)
+    useEffect(() => {
+        let active = true
+        setError("")
+        if (!token) {
+            setSettings(defaultSettings)
+            return () => { active = false }
+        }
+
+        apiRequest("user-data/settings")
+            .then(({ settings: storedSettings }) => {
+                if (active && storedSettings) {
+                    setSettings({ ...defaultSettings, ...storedSettings })
+                }
+            })
+            .catch((requestError) => {
+                if (active) setError(requestError.message || "Could not load settings")
+            })
+
+        return () => { active = false }
+    }, [token])
+
+    async function saveSettings(nextSettings) {
+        try {
+            setError("")
+            const data = await apiRequest("user-data/settings", {
+                method: "PUT",
+                body: JSON.stringify(nextSettings)
+            })
+            setSettings({ ...defaultSettings, ...data.settings })
+            return true
+        } catch (requestError) {
+            setError(requestError.message || "Could not save settings")
+            return false
+        }
     }
 
-    function resetSettings() {
-        saveSettings(defaultSettings)
+    async function resetSettings() {
+        return saveSettings(defaultSettings)
     }
 
     return (
         <SettingsContext.Provider
-            value={{ settings, saveSettings, resetSettings }}
+            value={{ settings, saveSettings, resetSettings, error }}
         >
             {children}
         </SettingsContext.Provider>

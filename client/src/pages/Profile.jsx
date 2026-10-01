@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useProfile } from "../context/profile-context"
 import {
     User,
@@ -16,11 +16,20 @@ import {
 } from "lucide-react"
 
 function Profile() {
-    const { profile, setProfile } = useProfile()
+    const { profile, setProfile, saveProfile, loading, error } = useProfile()
     const fileInputRef = useRef(null)
 
     const [isEditing, setIsEditing] = useState(false)
     const [saved, setSaved] = useState(false)
+
+    useEffect(() => {
+        if (!loading) {
+            setIsEditing(
+                !profile.headline && !profile.bio &&
+                !profile.experience && !profile.education
+            )
+        }
+    }, [loading])
 
     const profileFields = [
         "name",
@@ -46,7 +55,10 @@ function Profile() {
         setSaved(false)
     }
 
-    function handleSave() {
+    async function handleSave() {
+        const wasSaved = await saveProfile(profile)
+        if (!wasSaved) return
+
         setIsEditing(false)
         setSaved(true)
 
@@ -67,15 +79,31 @@ function Profile() {
             return
         }
 
+        if (file.size > 5 * 1024 * 1024) {
+            event.target.value = ""
+            setSaved(false)
+            window.alert("Choose an image smaller than 5 MB.")
+            return
+        }
+
         const reader = new FileReader()
 
         reader.onload = () => {
-            const avatarUrl = reader.result
+            const image = new Image()
+            image.onload = () => {
+                const scale = Math.min(1, 512 / Math.max(image.width, image.height))
+                const canvas = document.createElement("canvas")
+                canvas.width = Math.round(image.width * scale)
+                canvas.height = Math.round(image.height * scale)
+                canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height)
 
-            setProfile((currentProfile) => ({
-                ...currentProfile,
-                avatarUrl
-            }))
+                setProfile((currentProfile) => ({
+                    ...currentProfile,
+                    avatarUrl: canvas.toDataURL("image/jpeg", 0.78)
+                }))
+                setSaved(false)
+            }
+            image.src = reader.result
         }
 
         reader.readAsDataURL(file)
@@ -546,6 +574,8 @@ function Profile() {
                     Profile saved successfully.
                 </div>
             )}
+
+            {error && <div className="app-error" role="alert">{error}</div>}
 
         </div>
     )
